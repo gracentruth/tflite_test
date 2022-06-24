@@ -2,12 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'home.dart';
-import 'home2.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 List<CameraDescription> cameras=[];
 
+
+
 Future<Null> main() async {
- WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   try {
     cameras = await availableCameras();
   } on CameraException catch (e) {
