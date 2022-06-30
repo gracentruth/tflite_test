@@ -1,6 +1,7 @@
-
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -20,7 +21,10 @@ import 'package:path/path.dart' as path;
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 
+
 typedef void Callback(List<dynamic> list, int h, int w);
+
+late dynamic memoryImage;
 
 class Camera extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -38,6 +42,7 @@ class _CameraState extends State<Camera> {
   bool isDetecting = false;
 
   FirebaseStorage storage = FirebaseStorage.instance;
+  //final CollectionReference _p = FirebaseFirestore.instance.collection('image');
 
   @override
   void initState() {
@@ -56,79 +61,61 @@ class _CameraState extends State<Camera> {
         }
         setState(() {});
 
-        int a=0;
+        int a = 0;
 
         controller.startImageStream((CameraImage img) async {
-
           if (!isDetecting) {
             isDetecting = true;
-            print(img);
+
+           Uint8List? pngBytes = img.planes[0].bytes;
+          // print(pngBytes);
+
+            FirebaseFirestore.instance.
+            collection('image2').
+            add({
+              'name': 'datata',
+            });
+           // print('finish database upload');
+
             a=a+1;
+            await storage.ref('meta').putData(
+              pngBytes,);
 
-            Uint8List? pngBytes =img.planes[0].bytes;
+            //final path = await  getApplicationDocumentsDirectory();;
+            //File file1 =File.fromRawPath(pngBytes);
+           //print('dir: ${path.path}');
 
-            String dir = (await getApplicationDocumentsDirectory()).path;
-            String currentdir = (await getApplicationDocumentsDirectory()).path;
-            print('currentdir: $currentdir');
-            String fullPath = '$dir/abc.png';
-            print("local file full path ${fullPath}");
-            File file = await File(fullPath);
-            await file.writeAsBytes(pngBytes);
-            print('*****file $file');
-
-
-            await storage.ref('newfile').putFile(
-              file,
-              SettableMetadata(customMetadata: {
-                'num': 'hello',
-              }),
-            );
-            print('storageeee');
-            setState(() {});
-
-            // final result = await ImageGallerySaver.saveImage(pngBytes);
-            // print('result: $result');
-
-
-            //File file=File.fromRawPath(pngBytes);
-
-           // print(file);
+           // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
 
           // print(Image.memory(pngBytes).image);
-          //  var i =Image.memory(pngBytes).image; //MemoryImage(_Uint8ArrayView#855ea, scale: 1.0)
-          //   memoryImage=i;
-          //   Uint8List bytes =  Uint8List.fromList('_Uint8ArrayView#8c4bc'.codeUnits);
-          //   //print(bytes);
-          //  // print('++++');
-          //   //print(pngBytes);
-          //  // final data = await readExifFromBytes(pngBytes);
-          //  // print('data${readExifFromBytes(pngBytes)}');
-          //
-          // await storage.ref('metadata$a').putString(
-          //     Image.memory(pngBytes).toString(),
-          //   metadata: SettableMetadata(customMetadata: {
-          //     'image_meta': Image.memory(pngBytes).toString()
-          //   }
-          //   ),
-          //     //SettableMetadata(contentType:)
-          // );
+           memoryImage= Image.memory(pngBytes).image;
 
 
-
-            // await storage.ref('image7.png').putFile(
-            //     imgFile,
-            //
-            //     SettableMetadata(customMetadata: {
-            //       'num':pngBytes.toString(),
-            //     },
-            //       contentType: "image/png",
-            //     ));
-            print('storageeee');
             setState(() {});
 
-            //File imageFile = File(image2!.path);
+            //imgFile.writeAsBytes(pngBytes!);
 
-           //print(image2.image);
+
+
+
+
+           // print('file1_2: $file1');
+            // await storage.ref('file2').putFile(
+            //   file1,
+            //   SettableMetadata(customMetadata: {
+            //     'num': 'hello',
+            //   }),
+            // );
+
+
+
+
+            // await storage.ref('eunjin$a').putString(
+            //       Image.memory(pngBytes).toString(),
+            //       metadata: SettableMetadata(customMetadata: {
+            //         'image_meta': Image.memory(pngBytes).toString()
+            //       }),
+            //     );
 
             int startTime = new DateTime.now().millisecondsSinceEpoch;
 
@@ -142,7 +129,7 @@ class _CameraState extends State<Camera> {
                 numResults: 2,
               ).then((recognitions) {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
-             //   print("Detection took ${endTime - startTime}");
+                //   print("Detection took ${endTime - startTime}");
 
                 widget.setRecognitions(recognitions!, img.height, img.width);
 
@@ -158,7 +145,7 @@ class _CameraState extends State<Camera> {
                 numResults: 2,
               ).then((recognitions) {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
-             //   print("Detection took ${endTime - startTime}");
+                //   print("Detection took ${endTime - startTime}");
 
                 widget.setRecognitions(recognitions!, img.height, img.width);
 
@@ -178,9 +165,9 @@ class _CameraState extends State<Camera> {
                 threshold: widget.model == yolo ? 0.2 : 0.4,
               ).then((recognitions) {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
-             //   print("Detection took ${endTime - startTime}");
+                //   print("Detection took ${endTime - startTime}");
 
-               widget.setRecognitions(recognitions!, img.height, img.width);
+                widget.setRecognitions(recognitions!, img.height, img.width);
 
                 isDetecting = false;
               });
@@ -219,11 +206,8 @@ class _CameraState extends State<Camera> {
           screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
       child: RepaintBoundary(
         key: globalKey,
-        child:  CameraPreview(controller),
-
+        child: CameraPreview(controller),
       ),
-
-
     );
   }
 }

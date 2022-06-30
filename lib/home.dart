@@ -200,7 +200,11 @@ class _HomePageState extends State<HomePage> {
             child:
             TextButton(
               onPressed: () {
-                _capture();
+              //  _capture();
+                Navigator.push(context, MaterialPageRoute(builder: (context) {
+                  return ImagePage();
+                }));
+
               },
               child: Text('capture'),
             ),
