@@ -1,3 +1,5 @@
+
+
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +23,10 @@ class ImagePage extends StatefulWidget {
 
 class _ImagePageState extends State<ImagePage> {
 
-  Uint8List imageData=Uint8List(10000);
-  Uint8List imageData2=Uint8List(10000);
+  Uint8List imageData=Uint8List(100000000);
+  Uint8List imageData2=Uint8List(100000000);
+  Uint8List? data=Uint8List(100000000);
+  late Image img;
 
 
   @override
@@ -34,10 +38,18 @@ class _ImagePageState extends State<ImagePage> {
 
   void loadAsset() async {
 
-    Uint8List data2 = (await rootBundle.load('assets/eunjin.png')).buffer.asUint8List();
+    // Uint8List data2 = (await rootBundle.load('assets/eunjin.png')).buffer.asUint8List();
 
-    setState(() => this.imageData2 = data2);
+    // setState(() => this.imageData2 = data2);
+    //
+
+
+
+
+
+
     print('---------------eunjin-----------');
+    print(imageData2.length);
     print(imageData2);
 
 
@@ -52,15 +64,30 @@ class _ImagePageState extends State<ImagePage> {
 
     for (var item in listResult.items) {
       item.getData().then((value) {
-        Uint8List? data=value;
+        data=value;
 
-        setState(() => this.imageData = data!);
+
+        //setState(() => this.imageData = data!);
+
         print('---------------firebase-----------');
-
+        print(imageData.length);
 
         print(imageData);
+
+        this.imageData = data!;
+
+
       });
-    }
+    } // img = new Image.memory(
+    //   data!,
+    //   width: 640,
+    //   height: 480,
+    //   scale: 1,
+    //   fit: BoxFit.contain,
+    // );
+
+
+
   }
 
   // List<int> list =  ;
@@ -73,14 +100,35 @@ class _ImagePageState extends State<ImagePage> {
       appBar: AppBar(
         title: Text('meta image'),
       ),
-      body: Container(
-        width: 150,
-        height: 150,
-        decoration: BoxDecoration(
-          image: new DecorationImage(
-              fit: BoxFit.cover, image: MemoryImage(imageData, scale: 0.5)),
-        ),
-      ),
+      body: Center(child: _ImageWrapper()),
     );
+
+  }
+  Widget _ImageWrapper() {
+    if (imageData == null) {
+      return Container(
+        child:Text('NO Image'),
+
+      );
+    }
+    return Container(
+      width: 900,
+      height: 550,
+      color: Colors.purple,
+      child: Text(''),
+    );
+
+    //   Image.fromBytes(
+    //
+    // );
+      //Image.memory(imageData);
+    //   Container(
+    //   width: 150,
+    //   height: 150,
+    //   decoration: BoxDecoration(
+    //     image: new DecorationImage(
+    //         fit: BoxFit.cover, image: MemoryImage(imageData2, scale: 0.5)),
+    //   ),
+    // );
   }
 }
