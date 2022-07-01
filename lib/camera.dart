@@ -88,7 +88,7 @@ class _CameraState extends State<Camera> {
            // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
 
           // print(Image.memory(pngBytes).image);
-           memoryImage= Image.memory(pngBytes).image;
+          // memoryImage= Image.memory(pngBytes).image;
 
 
             setState(() {});
@@ -123,6 +123,7 @@ class _CameraState extends State<Camera> {
               Tflite.runModelOnFrame(
                 bytesList: img.planes.map((plane) {
                   return plane.bytes;
+
                 }).toList(),
                 imageHeight: img.height,
                 imageWidth: img.width,

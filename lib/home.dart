@@ -14,7 +14,6 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,10 +21,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 var globalKey = new GlobalKey();
-
-
-
-
 
 class HomePage extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -37,22 +32,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<dynamic> _recognitions=[];
+  List<dynamic> _recognitions = [];
   int _imageHeight = 0;
   int _imageWidth = 0;
   String _model = "";
 
   FirebaseStorage storage = FirebaseStorage.instance;
 
-
-
   @override
   void initState() {
     super.initState();
   }
-
-
-
 
   loadModel() async {
     String? res;
@@ -105,7 +95,8 @@ class _HomePageState extends State<HomePage> {
       var boundary = renderObject;
       ui.Image image = await boundary.toImage();
       final directory = (await getApplicationDocumentsDirectory()).path;
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List? pngBytes = byteData?.buffer.asUint8List();
       //print(pngBytes);
 
@@ -114,17 +105,13 @@ class _HomePageState extends State<HomePage> {
       imgFile.writeAsBytes(pngBytes!);
 
       await storage.ref('image3.png').putFile(
-          imgFile,
-
-          SettableMetadata(customMetadata: {
-            'num': 'hello',
-          }),
-
-      );
+            imgFile,
+            SettableMetadata(customMetadata: {
+              'num': 'hello',
+            }),
+          );
       print('storageeee');
       setState(() {});
-
-
 
       print("-----------------FINISH CAPTURE ${imgFile.path}------------");
     }
@@ -134,84 +121,73 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     Size screen = MediaQuery.of(context).size;
     return Scaffold(
-      body: _model == ""
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  RaisedButton(
-                    child: const Text(ssd),
-                    onPressed: () => onSelect(ssd),
+        body: _model == ""
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    RaisedButton(
+                      child: const Text(ssd),
+                      onPressed: () => onSelect(ssd),
+                    ),
+                    // RaisedButton(
+                    //   child: const Text(yolo),
+                    //   onPressed: () => onSelect(yolo),
+                    // ),
+                    // RaisedButton(
+                    //   child: const Text(mobilenet),
+                    //   onPressed: () => onSelect(mobilenet),
+                    // ),
+                    // RaisedButton(
+                    //   child: const Text(posenet),
+                    //   onPressed: () => onSelect(posenet),
+                    // ),
+                    RaisedButton(
+                        child: const Text('meta image'),
+                        onPressed: () {
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (context) {
+                            return ImagePage();
+                          }));
+                        }),
+                  ],
+                ),
+              )
+            : Column(
+                children: [
+                  Container(
+                    height: 300,
+                    child: Stack(
+                      children: [
+                        Camera(
+                          widget.cameras,
+                          _model,
+                          setRecognitions,
+                        ),
+                        BndBox(
+                            _recognitions == null ? [] : _recognitions,
+                            math.max(_imageHeight, _imageWidth),
+                            math.min(_imageHeight, _imageWidth),
+                            screen.height,
+                            screen.width,
+                            _model),
+                      ],
+                    ),
                   ),
-                  RaisedButton(
-                    child: const Text(yolo),
-                    onPressed: () => onSelect(yolo),
-                  ),
-                  RaisedButton(
-                    child: const Text(mobilenet),
-                    onPressed: () => onSelect(mobilenet),
-                  ),
-                  RaisedButton(
-                    child: const Text(posenet),
-                    onPressed: () => onSelect(posenet),
-                  ),
-                  RaisedButton(
-                    child: const Text('meta image'),
-                    onPressed: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context) {
-                        return ImagePage();
-                      }));
-                    }
-                  ),
-
+                  Container(
+                    height: 100,
+                    child: TextButton(
+                      onPressed: () {
+                        //  _capture();
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (context) {
+                          return ImagePage();
+                        }));
+                      },
+                      child: Text('capture'),
+                    ),
+                  )
                 ],
-              ),
-            )
-          : Column(
-        children: [
-          Container(
-            height: 300,
-            child:Stack(
-              children: [
-
-
-                   Camera(
-                    widget.cameras,
-                    _model,
-                    setRecognitions,
-                  ),
-
-
-
-
-                BndBox(
-                    _recognitions == null ? [] : _recognitions,
-                    math.max(_imageHeight, _imageWidth),
-                    math.min(_imageHeight, _imageWidth),
-                    screen.height,
-                    screen.width,
-                    _model),
-              ],
-            ),
-          ),
-
-          Container(
-            height: 100,
-            child:
-            TextButton(
-              onPressed: () {
-              //  _capture();
-                Navigator.push(context, MaterialPageRoute(builder: (context) {
-                  return ImagePage();
-                }));
-
-              },
-              child: Text('capture'),
-            ),
-          )
-
-        ],
-      )
-    );
+              ));
   }
 }
