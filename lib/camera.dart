@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -25,6 +26,8 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 typedef void Callback(List<dynamic> list, int h, int w);
 
 late dynamic memoryImage;
+Uint8List imagelist=Uint8List(10000000);
+List<Uint8List> imagelist2=[];
 
 class Camera extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -66,64 +69,106 @@ class _CameraState extends State<Camera> {
         controller.startImageStream((CameraImage img) async {
           if (!isDetecting) {
             isDetecting = true;
+          //
+          //  Uint8List? pngBytes = img.planes[0].bytes;
+          // // print(pngBytes);
+          //
+          //   FirebaseFirestore.instance.
+          //   collection('image2').
+          //   add({
+          //     'name': 'datata',
+          //   });
+          //  // print('finish database upload');
+          //
+          //   a=a+1;
+          //   await storage.ref('meta').putData(
+          //     pngBytes,);
+          //
+          //   //final path = await  getApplicationDocumentsDirectory();;
+          //   //File file1 =File.fromRawPath(pngBytes);
+          //  //print('dir: ${path.path}');
+          //
+          //  // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
+          //
+          // // print(Image.memory(pngBytes).image);
+          // // memoryImage= Image.memory(pngBytes).image;
+          //
+          //
+          //   setState(() {});
+          //
+          //   //imgFile.writeAsBytes(pngBytes!);
+          //
+          //
+          //
+          //
+          //
+          //  // print('file1_2: $file1');
+          //   // await storage.ref('file2').putFile(
+          //   //   file1,
+          //   //   SettableMetadata(customMetadata: {
+          //   //     'num': 'hello',
+          //   //   }),
+          //   // );
+          //
+          //
+          //
+          //
+          //   // await storage.ref('eunjin$a').putString(
+          //   //       Image.memory(pngBytes).toString(),
+          //   //       metadata: SettableMetadata(customMetadata: {
+          //   //         'image_meta': Image.memory(pngBytes).toString()
+          //   //       }),
+          //   //     );
 
-           Uint8List? pngBytes = img.planes[0].bytes;
-          // print(pngBytes);
+            final int numBytes =
+            img.planes.fold(0, (count, plane) => count += plane.bytes.length);
+            final Uint8List allBytes = Uint8List(numBytes);
 
-            FirebaseFirestore.instance.
-            collection('image2').
-            add({
-              'name': 'datata',
-            });
-           // print('finish database upload');
+            int nextIndex = 0;
+            for (int i = 0; i < img.planes.length; i++) {
+              allBytes.setRange(nextIndex, nextIndex + img.planes[i].bytes.length,
+                  img.planes[i].bytes);
+              nextIndex += img.planes[i].bytes.length;
+            }
 
-            a=a+1;
-            await storage.ref('meta').putData(
-              pngBytes,);
+            // Convert as done previously
+            String base64Image = base64Encode(allBytes);
 
-            //final path = await  getApplicationDocumentsDirectory();;
-            //File file1 =File.fromRawPath(pngBytes);
-           //print('dir: ${path.path}');
-
-           // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
-
-          // print(Image.memory(pngBytes).image);
-          // memoryImage= Image.memory(pngBytes).image;
+            var byteImage = Base64Decoder().convert(base64Image);
+            String stringImage = String.fromCharCodes(byteImage);
 
 
-            setState(() {});
+            print('*****');
 
-            //imgFile.writeAsBytes(pngBytes!);
+            print(Uint8List.fromList(stringImage.codeUnits));
+           // imagelist=Uint8List.fromList(stringImage.codeUnits);
+            imagelist2= img.planes.map((plane) {
+              return plane.bytes;
 
+            }).toList();
 
 
 
+               await storage.ref('meta2').putString(
+                   stringImage
+                // Uint8List.fromList(stringImage.codeUnits),
 
-           // print('file1_2: $file1');
-            // await storage.ref('file2').putFile(
-            //   file1,
-            //   SettableMetadata(customMetadata: {
-            //     'num': 'hello',
-            //   }),
-            // );
+               );
 
 
 
-
-            // await storage.ref('eunjin$a').putString(
-            //       Image.memory(pngBytes).toString(),
-            //       metadata: SettableMetadata(customMetadata: {
-            //         'image_meta': Image.memory(pngBytes).toString()
-            //       }),
-            //     );
 
             int startTime = new DateTime.now().millisecondsSinceEpoch;
+
+
+
+
+
 
             if (widget.model == mobilenet) {
               Tflite.runModelOnFrame(
                 bytesList: img.planes.map((plane) {
                   return plane.bytes;
-
                 }).toList(),
                 imageHeight: img.height,
                 imageWidth: img.width,
