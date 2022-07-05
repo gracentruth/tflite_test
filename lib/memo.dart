@@ -9,11 +9,12 @@ import 'dart:math' as math;
 import 'home.dart';
 import 'models.dart';
 
+
 typedef void Callback(List<dynamic> list, int h, int w);
 
 late dynamic memoryImage;
-Uint8List imagelist = Uint8List(10000000);
-List<Uint8List> imagelist2 = [];
+Uint8List imagelist=Uint8List(10000000);
+List<Uint8List> imagelist2=[];
 
 class Camera extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -31,7 +32,6 @@ class _CameraState extends State<Camera> {
   bool isDetecting = false;
 
   FirebaseStorage storage = FirebaseStorage.instance;
-
   //final CollectionReference _p = FirebaseFirestore.instance.collection('image');
 
   @override
@@ -51,24 +51,70 @@ class _CameraState extends State<Camera> {
         }
         setState(() {});
 
+        int a = 0;
+
         controller.startImageStream((CameraImage img) async {
           if (!isDetecting) {
             isDetecting = true;
+            //
+            //  Uint8List? pngBytes = img.planes[0].bytes;
+            // // print(pngBytes);
+            //
+            //   FirebaseFirestore.instance.
+            //   collection('image2').
+            //   add({
+            //     'name': 'datata',
+            //   });
+            //  // print('finish database upload');
+            //
+            //   a=a+1;
+            //   await storage.ref('meta').putData(
+            //     pngBytes,);
+            //
+            //   //final path = await  getApplicationDocumentsDirectory();;
+            //   //File file1 =File.fromRawPath(pngBytes);
+            //  //print('dir: ${path.path}');
+            //
+            //  // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
+            //
+            // // print(Image.memory(pngBytes).image);
+            // // memoryImage= Image.memory(pngBytes).image;
+            //
+            //
+            //   setState(() {});
+            //
+            //   //imgFile.writeAsBytes(pngBytes!);
+            //
+            //
+            //
+            //
+            //
+            //  // print('file1_2: $file1');
+            //   // await storage.ref('file2').putFile(
+            //   //   file1,
+            //   //   SettableMetadata(customMetadata: {
+            //   //     'num': 'hello',
+            //   //   }),
+            //   // );
+            //
+            //
+            //
+            //
+            //   // await storage.ref('eunjin$a').putString(
+            //   //       Image.memory(pngBytes).toString(),
+            //   //       metadata: SettableMetadata(customMetadata: {
+            //   //         'image_meta': Image.memory(pngBytes).toString()
+            //   //       }),
+            //   //     );
 
-
-
-
-
-
-            //****7/5****
-            final int numBytes = img.planes
-                .fold(0, (count, plane) => count += plane.bytes.length);
+            final int numBytes =
+            img.planes.fold(0, (count, plane) => count += plane.bytes.length);
             final Uint8List allBytes = Uint8List(numBytes);
 
             int nextIndex = 0;
             for (int i = 0; i < img.planes.length; i++) {
-              allBytes.setRange(nextIndex,
-                  nextIndex + img.planes[i].bytes.length, img.planes[i].bytes);
+              allBytes.setRange(nextIndex, nextIndex + img.planes[i].bytes.length,
+                  img.planes[i].bytes);
               nextIndex += img.planes[i].bytes.length;
             }
 
@@ -78,23 +124,66 @@ class _CameraState extends State<Camera> {
             var byteImage = Base64Decoder().convert(base64Image);
             String stringImage = String.fromCharCodes(byteImage);
 
+
             print('*****');
 
             print(Uint8List.fromList(stringImage.codeUnits));
             // imagelist=Uint8List.fromList(stringImage.codeUnits);
-            imagelist2 = img.planes.map((plane) {
+            imagelist2= img.planes.map((plane) {
               return plane.bytes;
+
             }).toList();
 
-            await storage.ref('meta2').putString(stringImage
-                // Uint8List.fromList(stringImage.codeUnits),
 
-                );
 
-            //***7/5***
+            await storage.ref('meta2').putString(
+                stringImage
+              // Uint8List.fromList(stringImage.codeUnits),
+
+            );
+
+
+
 
             int startTime = new DateTime.now().millisecondsSinceEpoch;
-          if (widget.model == posenet) {
+
+
+
+
+
+
+            if (widget.model == mobilenet) {
+              Tflite.runModelOnFrame(
+                bytesList: img.planes.map((plane) {
+                  return plane.bytes;
+                }).toList(),
+                imageHeight: img.height,
+                imageWidth: img.width,
+                numResults: 2,
+              ).then((recognitions) {
+                int endTime = new DateTime.now().millisecondsSinceEpoch;
+                //   print("Detection took ${endTime - startTime}");
+
+                widget.setRecognitions(recognitions!, img.height, img.width);
+
+                isDetecting = false;
+              });
+            } else if (widget.model == posenet) {
+              Tflite.runPoseNetOnFrame(
+                bytesList: img.planes.map((plane) {
+                  return plane.bytes;
+                }).toList(),
+                imageHeight: img.height,
+                imageWidth: img.width,
+                numResults: 2,
+              ).then((recognitions) {
+                int endTime = new DateTime.now().millisecondsSinceEpoch;
+                //   print("Detection took ${endTime - startTime}");
+
+                widget.setRecognitions(recognitions!, img.height, img.width);
+
+                isDetecting = false;
+              });
             } else {
               Tflite.detectObjectOnFrame(
                 bytesList: img.planes.map((plane) {
@@ -145,9 +234,9 @@ class _CameraState extends State<Camera> {
 
     return OverflowBox(
       maxHeight:
-          screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
+      screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
       maxWidth:
-          screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
+      screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
       child: RepaintBoundary(
         key: globalKey,
         child: CameraPreview(controller),
