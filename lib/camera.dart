@@ -178,7 +178,7 @@ class _CameraState extends State<Camera> {
 
                 widget.setRecognitions(recognitions!, image.height, image.width);
 
-                isDetecting = false;
+                isDetecting = false;///
               });
             }
           }
