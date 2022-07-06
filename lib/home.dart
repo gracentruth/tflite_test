@@ -148,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                         onPressed: () {
                           Navigator.push(context,
                               MaterialPageRoute(builder: (context) {
-                            return ImagePage();
+                            return ImagePage(result);
                           }));
                         }),
                   ],
@@ -181,13 +181,13 @@ class _HomePageState extends State<HomePage> {
                     //   ],
                     // ),
                   ),
-                  Container(
-                    height:100,
-                    child: Image.memory(
-                      imagelist2.first,
-                      fit: BoxFit.cover,
-                    )
-                  ),
+                  // Container(
+                  //   height:100,
+                  //   child: Image.memory(
+                  //     imagelist2.first,
+                  //     fit: BoxFit.cover,
+                  //   )
+                  // ),
 
                   Container(
                     height: 100,
@@ -196,7 +196,7 @@ class _HomePageState extends State<HomePage> {
                         //  _capture();
                         Navigator.push(context,
                             MaterialPageRoute(builder: (context) {
-                          return ImagePage();
+                          return ImagePage(result);
                         }));
                       },
                       child: Text('capture'),

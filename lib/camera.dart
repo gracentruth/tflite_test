@@ -1,19 +1,21 @@
-import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite/tflite.dart';
 import 'dart:math' as math;
-
+import 'package:image/image.dart' as imglib;
 import 'home.dart';
 import 'models.dart';
 
 typedef void Callback(List<dynamic> list, int h, int w);
 
 late dynamic memoryImage;
-Uint8List imagelist = Uint8List(10000000);
-List<Uint8List> imagelist2 = [];
+Uint8List imagelist=Uint8List(10000000);
+CameraImage? result;
+int a=0;
 
 class Camera extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -26,12 +28,12 @@ class Camera extends StatefulWidget {
   _CameraState createState() => new _CameraState();
 }
 
+
 class _CameraState extends State<Camera> {
   late CameraController controller;
   bool isDetecting = false;
 
   FirebaseStorage storage = FirebaseStorage.instance;
-
   //final CollectionReference _p = FirebaseFirestore.instance.collection('image');
 
   @override
@@ -51,58 +53,121 @@ class _CameraState extends State<Camera> {
         }
         setState(() {});
 
-        controller.startImageStream((CameraImage img) async {
+        int a = 0;
+
+        controller.startImageStream((CameraImage image) async {
           if (!isDetecting) {
             isDetecting = true;
+            setState(() {
+              result = image;
+            });
+
+            try {
+              final int width = image.width;
+              final int height = image.height;
+              final int uvRowStride = image.planes[1].bytesPerRow;
+              final int uvPixelStride = image.planes[1].bytesPerPixel!;
+              print("uvRowStride: " + uvRowStride.toString());
+              print("uvPixelStride: " + uvPixelStride.toString());
+
+              // imgLib -> Image package from https://pub.dartlang.org/packages/image
+              var img = imglib.Image(width, height); // Create Image buffer
+
+              // Fill image buffer with plane[0] from YUV420_888
+              for(int x=0; x < width; x++) {
+                for(int y=0; y < height; y++) {
+                  final int uvIndex = uvPixelStride * (x/2).floor() + uvRowStride*(y/2).floor();
+                  final int index = y * width + x;
+
+                  final yp = image.planes[0].bytes[index];
+                  final up = image.planes[1].bytes[uvIndex];
+                  final vp = image.planes[2].bytes[uvIndex];
+                  // Calculate pixel color
+                  int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
+                  int g = (yp - up * 46549 / 131072 + 44 -vp * 93604 / 131072 + 91).round().clamp(0, 255);
+                  int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+                  // color: 0x FF  FF  FF  FF
+                  //           A   B   G   R
+                  img.data[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+                }
+              }
+
+              imglib.PngEncoder pngEncoder = new imglib.PngEncoder(level: 0, filter: 0);
+              List<int> png = pngEncoder.encodeImage(img);
+
+              print('*********print Uint8L ist**********');
+              print(Uint8List.fromList(png));
+              a=a+1;
+
+             // firebase storeage 에 넣기
+              await storage.ref('imagelist$a').putData(
+                  Uint8List.fromList(png)
+                // Uint8List.fromList(stringImage.codeUnits),
+              );
+
+              // FirebaseFirestore.instance.collection('image').doc().set({
+              //   'uint8list':'test' //Uint8List.fromList(png).toString()
+              // });
 
 
+              return Image.memory(Uint8List.fromList(png));
 
 
-
-
-            //****7/5****
-            final int numBytes = img.planes
-                .fold(0, (count, plane) => count += plane.bytes.length);
-            final Uint8List allBytes = Uint8List(numBytes);
-
-            int nextIndex = 0;
-            for (int i = 0; i < img.planes.length; i++) {
-              allBytes.setRange(nextIndex,
-                  nextIndex + img.planes[i].bytes.length, img.planes[i].bytes);
-              nextIndex += img.planes[i].bytes.length;
+            } catch (e) {
+              print(">>>>>>>>>>>> ERROR:" + e.toString());
             }
 
-            // Convert as done previously
-            String base64Image = base64Encode(allBytes);
+            FirebaseFirestore.instance.collection('image').doc().set({
+              'uint8list':'test' //Uint8List.fromList(png).toString()
+            });
 
-            var byteImage = Base64Decoder().convert(base64Image);
-            String stringImage = String.fromCharCodes(byteImage);
 
-            print('*****');
 
-            print(Uint8List.fromList(stringImage.codeUnits));
-            // imagelist=Uint8List.fromList(stringImage.codeUnits);
-            imagelist2 = img.planes.map((plane) {
-              return plane.bytes;
-            }).toList();
 
-            await storage.ref('meta2').putString(stringImage
-                // Uint8List.fromList(stringImage.codeUnits),
 
-                );
 
-            //***7/5***
 
-            int startTime = new DateTime.now().millisecondsSinceEpoch;
-          if (widget.model == posenet) {
+
+            if (widget.model == mobilenet) {
+              Tflite.runModelOnFrame(
+                bytesList: image.planes.map((plane) {
+                  return plane.bytes;
+                }).toList(),
+                imageHeight: image.height,
+                imageWidth: image.width,
+                numResults: 2,
+              ).then((recognitions) {
+                int endTime = new DateTime.now().millisecondsSinceEpoch;
+                //   print("Detection took ${endTime - startTime}");
+
+                widget.setRecognitions(recognitions!, image.height, image.width);
+
+                isDetecting = false;
+              });
+            } else if (widget.model == posenet) {
+              Tflite.runPoseNetOnFrame(
+                bytesList: image.planes.map((plane) {
+                  return plane.bytes;
+                }).toList(),
+                imageHeight: image.height,
+                imageWidth: image.width,
+                numResults: 2,
+              ).then((recognitions) {
+                int endTime = new DateTime.now().millisecondsSinceEpoch;
+                //   print("Detection took ${endTime - startTime}");
+
+                widget.setRecognitions(recognitions!, image.height, image.width);
+
+                isDetecting = false;
+              });
             } else {
               Tflite.detectObjectOnFrame(
-                bytesList: img.planes.map((plane) {
+                bytesList: image.planes.map((plane) {
                   return plane.bytes;
                 }).toList(),
                 model: widget.model == yolo ? "YOLO" : "SSDMobileNet",
-                imageHeight: img.height,
-                imageWidth: img.width,
+                imageHeight: image.height,
+                imageWidth: image.width,
                 imageMean: widget.model == yolo ? 0 : 127.5,
                 imageStd: widget.model == yolo ? 255.0 : 127.5,
                 numResultsPerClass: 1,
@@ -111,7 +176,7 @@ class _CameraState extends State<Camera> {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
                 //   print("Detection took ${endTime - startTime}");
 
-                widget.setRecognitions(recognitions!, img.height, img.width);
+                widget.setRecognitions(recognitions!, image.height, image.width);
 
                 isDetecting = false;
               });
@@ -145,9 +210,9 @@ class _CameraState extends State<Camera> {
 
     return OverflowBox(
       maxHeight:
-          screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
+      screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
       maxWidth:
-          screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
+      screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
       child: RepaintBoundary(
         key: globalKey,
         child: CameraPreview(controller),
