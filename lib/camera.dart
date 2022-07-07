@@ -160,6 +160,8 @@ class _CameraState extends State<Camera> {
 
                 isDetecting = false;
               });
+
+
             } else {
               Tflite.detectObjectOnFrame(
                 bytesList: image.planes.map((plane) {
