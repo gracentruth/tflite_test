@@ -157,7 +157,7 @@ class _CameraState extends State<Camera> {
                 //   print("Detection took ${endTime - startTime}");
 
                 widget.setRecognitions(recognitions!, image.height, image.width);
-
+m
                 isDetecting = false;
               });
 
