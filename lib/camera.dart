@@ -91,7 +91,7 @@ class _CameraState extends State<Camera> {
                   img.data[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
                 }
               }
-              //변환하는데 시간이 너무 많이 걸려서 storage로 한번만 전달 된다.
+              //  변환하는데 시간이 너무 많이 걸려서 storage로 한번만 전달 된다.
               imglib.PngEncoder pngEncoder = new imglib.PngEncoder(level: 0, filter: 0);
               List<int> png = pngEncoder.encodeImage(img);
 
