@@ -1,30 +1,21 @@
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:tflite/tflite.dart';
 import 'dart:math' as math;
 import 'package:image/image.dart' as imglib;
-import 'package:exif/exif.dart';
-
 import 'home.dart';
-import 'imageConvert.dart';
-import 'imagepage.dart';
 import 'models.dart';
-
-import 'dart:io';
-import 'package:path/path.dart' as path;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
-
-
 
 typedef void Callback(List<dynamic> list, int h, int w);
 
 late dynamic memoryImage;
+Uint8List imagelist=Uint8List(10000000);
+CameraImage? result;
+int a=0;
 
 class Camera extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -36,6 +27,7 @@ class Camera extends StatefulWidget {
   @override
   _CameraState createState() => new _CameraState();
 }
+
 
 class _CameraState extends State<Camera> {
   late CameraController controller;
@@ -63,103 +55,122 @@ class _CameraState extends State<Camera> {
 
         int a = 0;
 
-        controller.startImageStream((CameraImage img) async {
+        controller.startImageStream((CameraImage image) async {
           if (!isDetecting) {
             isDetecting = true;
-
-           Uint8List? pngBytes = img.planes[0].bytes;
-          // print(pngBytes);
-
-            FirebaseFirestore.instance.
-            collection('image2').
-            add({
-              'name': 'datata',
+            setState(() {
+              result = image;
             });
-           // print('finish database upload');
 
-            a=a+1;
-            await storage.ref('meta').putData(
-              pngBytes,);
+            try {
+              final int width = image.width;
+              final int height = image.height;
+              final int uvRowStride = image.planes[1].bytesPerRow;
+              final int uvPixelStride = image.planes[1].bytesPerPixel!;
+              print("uvRowStride: " + uvRowStride.toString());
+              print("uvPixelStride: " + uvPixelStride.toString());
 
-            //final path = await  getApplicationDocumentsDirectory();;
-            //File file1 =File.fromRawPath(pngBytes);
-           //print('dir: ${path.path}');
+              // imgLib -> Image package from https://pub.dartlang.org/packages/image
+              var img = imglib.Image(width, height); // Create Image buffer
 
-           // File imgFile = new File('/Users/gracentruth0103/Desktop/22_Sum/Flutter Advanced Camp/tflite_test/assets/screenshot.png');
+              // Fill image buffer with plane[0] from YUV420_888
+              for(int x=0; x < width; x++) {
+                for(int y=0; y < height; y++) {
+                  final int uvIndex = uvPixelStride * (x/2).floor() + uvRowStride*(y/2).floor();
+                  final int index = y * width + x;
 
-          // print(Image.memory(pngBytes).image);
-          // memoryImage= Image.memory(pngBytes).image;
+                  final yp = image.planes[0].bytes[index];
+                  final up = image.planes[1].bytes[uvIndex];
+                  final vp = image.planes[2].bytes[uvIndex];
+                  // Calculate pixel color
+
+                  int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
+                  int g = (yp - up * 46549 / 131072 + 44 -vp * 93604 / 131072 + 91).round().clamp(0, 255);
+                  int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+                  // color: 0x FF  FF  FF  FF
+                  //           A   B   G   R
+                  img.data[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+                }
+              }
+              //  변환하는데 시간이 너무 많이 걸려서 storage로 한번만 전달 된다.
+              imglib.PngEncoder pngEncoder = new imglib.PngEncoder(level: 0, filter: 0);
+              List<int> png = pngEncoder.encodeImage(img);
+
+              print('*********print Uint8L ist**********');
+              print(Uint8List.fromList(png));
+              a=a+1;
+
+             // firebase storeage 에 넣기
+              await storage.ref('imagelist$a').putData(
+                  Uint8List.fromList(png)
+                // Uint8List.fromList(stringImage.codeUnits),
+              );
+
+              // FirebaseFirestore.instance.collection('image').doc().set({
+              //   'uint8list':'test' //Uint8List.fromList(png).toString()
+              // });
 
 
-            setState(() {});
-
-            //imgFile.writeAsBytes(pngBytes!);
+              return Image.memory(Uint8List.fromList(png));
 
 
+            } catch (e) {
+              print(">>>>>>>>>>>> ERROR:" + e.toString());
+            }
 
-
-
-           // print('file1_2: $file1');
-            // await storage.ref('file2').putFile(
-            //   file1,
-            //   SettableMetadata(customMetadata: {
-            //     'num': 'hello',
-            //   }),
-            // );
+            FirebaseFirestore.instance.collection('image').doc().set({
+              'uint8list':'test' //Uint8List.fromList(png).toString()
+            });
 
 
 
 
-            // await storage.ref('eunjin$a').putString(
-            //       Image.memory(pngBytes).toString(),
-            //       metadata: SettableMetadata(customMetadata: {
-            //         'image_meta': Image.memory(pngBytes).toString()
-            //       }),
-            //     );
 
-            int startTime = new DateTime.now().millisecondsSinceEpoch;
+
+
 
             if (widget.model == mobilenet) {
               Tflite.runModelOnFrame(
-                bytesList: img.planes.map((plane) {
+                bytesList: image.planes.map((plane) {
                   return plane.bytes;
-
                 }).toList(),
-                imageHeight: img.height,
-                imageWidth: img.width,
+                imageHeight: image.height,
+                imageWidth: image.width,
                 numResults: 2,
               ).then((recognitions) {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
                 //   print("Detection took ${endTime - startTime}");
 
-                widget.setRecognitions(recognitions!, img.height, img.width);
+                widget.setRecognitions(recognitions!, image.height, image.width);
 
                 isDetecting = false;
               });
             } else if (widget.model == posenet) {
               Tflite.runPoseNetOnFrame(
-                bytesList: img.planes.map((plane) {
+                bytesList: image.planes.map((plane) {
                   return plane.bytes;
                 }).toList(),
-                imageHeight: img.height,
-                imageWidth: img.width,
+                imageHeight: image.height,
+                imageWidth: image.width,
                 numResults: 2,
               ).then((recognitions) {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
                 //   print("Detection took ${endTime - startTime}");
 
-                widget.setRecognitions(recognitions!, img.height, img.width);
-
+                widget.setRecognitions(recognitions!, image.height, image.width);
+m
                 isDetecting = false;
               });
+
+
             } else {
               Tflite.detectObjectOnFrame(
-                bytesList: img.planes.map((plane) {
+                bytesList: image.planes.map((plane) {
                   return plane.bytes;
                 }).toList(),
                 model: widget.model == yolo ? "YOLO" : "SSDMobileNet",
-                imageHeight: img.height,
-                imageWidth: img.width,
+                imageHeight: image.height,
+                imageWidth: image.width,
                 imageMean: widget.model == yolo ? 0 : 127.5,
                 imageStd: widget.model == yolo ? 255.0 : 127.5,
                 numResultsPerClass: 1,
@@ -168,9 +179,9 @@ class _CameraState extends State<Camera> {
                 int endTime = new DateTime.now().millisecondsSinceEpoch;
                 //   print("Detection took ${endTime - startTime}");
 
-                widget.setRecognitions(recognitions!, img.height, img.width);
+                widget.setRecognitions(recognitions!, image.height, image.width);
 
-                isDetecting = false;
+                isDetecting = false;///
               });
             }
           }
@@ -202,9 +213,9 @@ class _CameraState extends State<Camera> {
 
     return OverflowBox(
       maxHeight:
-          screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
+      screenRatio > previewRatio ? screenH : screenW / previewW * previewH,
       maxWidth:
-          screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
+      screenRatio > previewRatio ? screenH / previewH * previewW : screenW,
       child: RepaintBoundary(
         key: globalKey,
         child: CameraPreview(controller),

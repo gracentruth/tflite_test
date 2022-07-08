@@ -120,6 +120,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     Size screen = MediaQuery.of(context).size;
+    print(imagelist);
     return Scaffold(
         body: _model == ""
             ? Center(
@@ -147,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                         onPressed: () {
                           Navigator.push(context,
                               MaterialPageRoute(builder: (context) {
-                            return ImagePage();
+                            return ImagePage(result);
                           }));
                         }),
                   ],
@@ -157,23 +158,37 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Container(
                     height: 300,
-                    child: Stack(
-                      children: [
-                        Camera(
-                          widget.cameras,
-                          _model,
-                          setRecognitions,
-                        ),
-                        BndBox(
-                            _recognitions == null ? [] : _recognitions,
-                            math.max(_imageHeight, _imageWidth),
-                            math.min(_imageHeight, _imageWidth),
-                            screen.height,
-                            screen.width,
-                            _model),
-                      ],
+                    child: Camera(
+                      widget.cameras,
+                      _model,
+                      setRecognitions,
                     ),
+                    // Stack(
+                    //   children: [
+                    //     Camera(
+                    //       widget.cameras,
+                    //       _model,
+                    //       setRecognitions,
+                    //     ),
+                    //     // BndBox(
+                    //     //     _recognitions == null ? [] : _recognitions,
+                    //     //     math.max(_imageHeight, _imageWidth),
+                    //     //     math.min(_imageHeight, _imageWidth),
+                    //     //     screen.height,
+                    //     //     screen.width,
+                    //     //     _model),
+                    //
+                    //   ],
+                    // ),
                   ),
+                  // Container(
+                  //   height:100,
+                  //   child: Image.memory(
+                  //     imagelist2.first,
+                  //     fit: BoxFit.cover,
+                  //   )
+                  // ),
+
                   Container(
                     height: 100,
                     child: TextButton(
@@ -181,7 +196,7 @@ class _HomePageState extends State<HomePage> {
                         //  _capture();
                         Navigator.push(context,
                             MaterialPageRoute(builder: (context) {
-                          return ImagePage();
+                          return ImagePage(result);
                         }));
                       },
                       child: Text('capture'),

@@ -1,23 +1,15 @@
-
-
+import 'package:camera/camera.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-
 import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
+import 'package:image/image.dart' as imglib;
 import 'camera.dart';
-import 'dart:ui' as ui;
 
-
-//MemoryImage memoryImage=MemoryImage(_Uint8ArrayView#855ea, scale: 1.0);
 
 var memoryImage2;
 
 class ImagePage extends StatefulWidget {
-  const ImagePage({Key? key}) : super(key: key);
+  const ImagePage(CameraImage? img, {Key? key}) : super(key: key);
 
   @override
   State<ImagePage> createState() => _ImagePageState();
@@ -25,98 +17,26 @@ class ImagePage extends StatefulWidget {
 
 class _ImagePageState extends State<ImagePage> {
 
-  FirebaseStorage storage = FirebaseStorage.instance;
-
   Uint8List imageData=Uint8List(100000000);
   Uint8List imageData2=Uint8List(100000000);
- // Uint8List? data=Uint8List(100000000);
-  late Image img;
-  String str='nonononono';
-
 
   @override
   void initState() {
-
     super.initState();
-    loadAsset();
+
   }
 
-  void loadAsset() async {
-
-    Uint8List data2 = (await rootBundle.load('assets/eunjin.png')).buffer.asUint8List();
-
-
-    //print('ddataaaaaaaa');
-    //print(data2);
-
-    // await storage.ref('test_Uint8List').putData(
-    //   data2,);
-
-   // print('data2$data2');
-
-
-    setState(() => this.imageData2 = data2);
-    print('-------------asset_image-----------');
-    print(imageData2.length);
-    print(imageData2);
-
-
-    final storageRef = FirebaseStorage.instance.ref();
-    final listResult = await storageRef.listAll();
-
-    for (var item in listResult.items) {
-      //print(item.name);
-      item.getData().then((value) {
-
-        setState(() => this.imageData = value!);
-        print('--------------- firebase storage image -----------');
-        print(imageData.length);
-        print(imageData);
-      });
-    }
-    // -- decodeImage
-    // dynamic decodeImage=await decodeImageFromList(
-    //     imageData
-    // );
-    ui.Image? img;
-    Uint8List pixels = imageData; //external data
-    ui.decodeImageFromPixels(pixels, 100, 100, ui.PixelFormat.rgba8888, (i) {
-    img = i;
-    setState(() {});
-    });
 
 
 
-
-    // await storage.ref('storage_Uint8List').putData(
-    //   imageData,);
-    // img = new Image.memory(
-    //   data!,
-    //   width: 640,
-    //   height: 480,
-    //   scale: 1,
-    //   fit: BoxFit.contain,
-    // );
-  }
-  // List<int> list =  ;
-  // Uint8List bytes =  Uint8List.fromList('_Uint8ArrayView#db075'.codeUnits);
   @override
   Widget build(BuildContext context) {
 
-    // print('---------type check-------------');
-    // print('imageData is Uint8List');
-    // print(imageData is Uint8List);
-    //
-    // print('imageData2 is Uint8List');
-    // print(imageData2 is Uint8List);
-
     return Scaffold(
-
-
-        appBar: AppBar(
+      appBar: AppBar(
         title: Text('meta image'),
       ),
-      body: Center(child: _ImageWrapper() ),
+      body: Center(child: _ImageWrapper()),
     );
 
   }
@@ -124,41 +44,69 @@ class _ImagePageState extends State<ImagePage> {
     if (imageData == null) {
       return Container(
         child:Text('this is null'),
-
       );
     }
     return Container(
       width: 900,
       height: 550,
       //color: Colors.purple,
-      child:Container(
+      child:  Container(
           width: 150,
           height: 150,
-          decoration: BoxDecoration(
-            image: new DecorationImage(
-                fit: BoxFit.cover, image: MemoryImage(imageData, scale: 0.5)),
-          ),
+          child : Column(
+            children: [
+             // convertYUV420toImage(result!)
+              Container(),
+            ],
+          )
       ),
-
-
-      // Image.memory(
-      //     Uint8List.view(imageData.buffer)
-      // ),
-      //drawImage(img!, Offset.zero, Paint())
-
-
-
-    //   Image.fromBytes(
-    //
-    // );
-      //Image.memory(imageData);
-    //   Container(
-    //   width: 150,
-    //   height: 150,
-    //   decoration: BoxDecoration(
-    //     image: new DecorationImage(
-    //         fit: BoxFit.cover, image: MemoryImage(imageData2, scale: 0.5)),
-    //   ),
-     );
+    );
   }
+
+  // Widget convertYUV420toImage(CameraImage image) {
+  //   try {
+  //     final int width = image.width;
+  //     final int height = image.height;
+  //     final int uvRowStride = image.planes[1].bytesPerRow;
+  //     final int uvPixelStride = image.planes[1].bytesPerPixel!;
+  //     print("uvRowStride: " + uvRowStride.toString());
+  //     print("uvPixelStride: " + uvPixelStride.toString());
+  //
+  //     // imgLib -> Image package from https://pub.dartlang.org/packages/image
+  //     var img = imglib.Image(width, height); // Create Image buffer
+  //
+  //     // Fill image buffer with plane[0] from YUV420_888
+  //     for(int x=0; x < width; x++) {
+  //       for(int y=0; y < height; y++) {
+  //         final int uvIndex = uvPixelStride * (x/2).floor() + uvRowStride*(y/2).floor();
+  //         final int index = y * width + x;
+  //
+  //         final yp = image.planes[0].bytes[index];
+  //         final up = image.planes[1].bytes[uvIndex];
+  //         final vp = image.planes[2].bytes[uvIndex];
+  //         // Calculate pixel color
+  //         int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
+  //         int g = (yp - up * 46549 / 131072 + 44 -vp * 93604 / 131072 + 91).round().clamp(0, 255);
+  //         int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+  //         // color: 0x FF  FF  FF  FF
+  //         //           A   B   G   R
+  //         img.data[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+  //       }
+  //     }
+  //
+  //     imglib.PngEncoder pngEncoder = new imglib.PngEncoder(level: 0, filter: 0);
+  //     List<int> png = pngEncoder.encodeImage(img);
+  //     print('*********print Uint8List**********');
+  //     print(Uint8List.fromList(png));
+  //
+  //
+  //     return Image.memory(Uint8List.fromList(png));
+  //
+  //
+  //
+  //   } catch (e) {
+  //     print(">>>>>>>>>>>> ERROR:" + e.toString());
+  //   }
+  //   return Container();
+  // }
 }
